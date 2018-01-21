@@ -5,60 +5,65 @@ import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.commented.CommentedConfigurationNode;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
 import org.slf4j.Logger;
+import org.spongepowered.api.Game;
+import org.spongepowered.api.command.spec.CommandSpec;
 import org.spongepowered.api.config.ConfigDir;
 import org.spongepowered.api.config.DefaultConfig;
 import org.spongepowered.api.entity.Entity;
 import org.spongepowered.api.entity.EntityTypes;
 import org.spongepowered.api.entity.living.player.Player;
+import org.spongepowered.api.event.EventManager;
 import org.spongepowered.api.event.Order;
 import org.spongepowered.api.event.block.InteractBlockEvent;
 import org.spongepowered.api.event.cause.Cause;
 import org.spongepowered.api.event.cause.entity.spawn.SpawnTypes;
 import org.spongepowered.api.event.filter.cause.First;
-import org.spongepowered.api.event.game.state.GameAboutToStartServerEvent;
-import org.spongepowered.api.event.game.state.GamePreInitializationEvent;
-import org.spongepowered.api.event.game.state.GameStoppedServerEvent;
+import org.spongepowered.api.event.game.state.*;
 import org.spongepowered.api.plugin.Plugin;
 import org.spongepowered.api.event.Listener;
-import org.spongepowered.api.event.game.state.GameStartedServerEvent;
+import org.spongepowered.api.plugin.PluginContainer;
+import org.spongepowered.api.plugin.PluginManager;
+import org.spongepowered.api.text.Text;
 import org.spongepowered.api.world.World;
 import org.spongepowered.api.world.explosion.Explosion;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Collection;
+import java.util.Optional;
 
 
-@Plugin(id="spongetest", name="Sponge Test", version = "1.0.0")
+@Plugin(id="explodeyourself", name="Explode Yourself", version = "1.0.0")
 public class ExplodeYourself {
 
-    @Inject
-    @DefaultConfig(sharedRoot = false)
-    private Path defaultConig;
 
     @Inject
-    @DefaultConfig(sharedRoot = false)
-    private ConfigurationLoader<CommentedConfigurationNode> loader;
+    private PluginManager pluginManager;
 
     @Inject
-    @ConfigDir(sharedRoot = false)
-    private Path configDir;
+    private Game game;
 
     @Inject
     private Logger logger;
 
-    private ConfigurationNode config;
+    private ExplodeHandler explodeHandler;
+    private ToggleExplosionCommand toggleExplosionCommand;
+    private SetRadiusCommand setRadiusCommand;
+
 
     @Listener
     public void preInit(GamePreInitializationEvent event){
-        try{
-            config = loader.load();
+        explodeHandler = new ExplodeHandler(this);
+        toggleExplosionCommand = new ToggleExplosionCommand(this);
+        setRadiusCommand = new SetRadiusCommand(this);
+    }
 
-            if(!defaultConig.toFile().exists()){
-                config.getNode("placeholder").setValue(true);
-                loader.save(config);
-            }
-        }catch(IOException e){
-            logger.warn("Error loading default config!");
-        }
+    @Inject
+    public ExplodeYourself() {
+
+    }
+
+    public PluginManager getPluginManager(){
+        return pluginManager;
     }
 
     @Listener
@@ -76,15 +81,15 @@ public class ExplodeYourself {
         logger.info("Hi");
     }
 
-    @Listener(order = Order.POST)
-    public void onAttack(InteractBlockEvent.Primary event, @First Player player){
-        World world = player.getWorld();
-        Explosion e = Explosion.builder().location(player.getLocation()).radius(5).shouldPlaySmoke(true).build();
-        Entity tnt = world.createEntity(EntityTypes.PRIMED_TNT, player.getLocation().getPosition());
-        logger.info("Player attacked");
-        world.spawnEntity(e);
+    @Listener
+    public void init(GameInitializationEvent event){
+        game.getEventManager().registerListeners(this, explodeHandler);
+        game.getCommandManager().register(this, toggleExplosionCommand.getToggleCommand(), "toggle");
+        game.getCommandManager().register(this, setRadiusCommand.getSetRadiusCommand(), "setradius");
     }
 
-
+    public Logger getLogger(){
+        return logger;
+    }
 
 }
