@@ -1,2 +1,2 @@
-# ExplodeYourself
-sponge plugin
+# Exploder
+A simple explosion plugin.
