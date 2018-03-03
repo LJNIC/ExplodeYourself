@@ -1,2 +1,2 @@
 # Exploder
-A simple explosion plugin.
+**A simple explosion plugin.**
